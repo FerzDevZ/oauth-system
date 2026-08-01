@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# oauth-system
 
-## Getting Started
+Login OAuth 2.0 manual untuk Google dan GitHub. Tanpa Supabase, tanpa library auth — semua flow ditulis sendiri dengan Next.js (App Router).
 
-First, run the development server:
+## Fitur
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Login via Google dan GitHub
+- PKCE (S256) untuk Google
+- Proteksi route lewat `proxy.ts`
+- Rate limiting di endpoint auth
+- Session tersimpan di SQLite (`better-sqlite3`)
+- Logout, logout semua perangkat
+- Log aktivitas auth ke `data/auth.log`
+
+## Setup
+
+1. Install dependensi
+
+   ```bash
+   npm install
+   ```
+
+2. Buat OAuth credentials:
+
+   - **Google**: buat OAuth Client ID di [Google Cloud Console](https://console.cloud.google.com/apis/credentials), tambahkan redirect URI `http://localhost:3000/auth/google/callback`
+   - **GitHub**: buat OAuth App di [GitHub Developer Settings](https://github.com/settings/developers), isi callback URL `http://localhost:3000/auth/github/callback`
+
+3. Salin `.env.example` ke `.env`, lalu isi credential-nya
+
+4. Jalankan
+
+   ```bash
+   npm run dev
+   ```
+
+   Buka `http://localhost:3000`.
+
+## Scripts
+
+| Script | Fungsi |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run build` | Build production |
+| `npm run lint` | Lint |
+| `npm test` | Unit test (vitest) |
+| `npm run test:e2e` | E2E test (playwright) |
+
+## Struktur
+
+```
+src/
+  proxy.ts              # proteksi route global
+  app/auth/             # start & callback OAuth, logout
+  app/dashboard/        # halaman protected
+  lib/
+    db.ts               # SQLite (users, sessions)
+    session.ts          # buat/validasi/hapus session
+    security.ts         # rate limiting
+    logger.ts           # log event auth
+    oauth/              # google.ts, github.ts, pkce.ts
+data/
+  auth.db               # database (auto dibuat, di-gitignore)
+  auth.log              # log aktivitas
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Catatan
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# oauth-system
+- `.env` dan `data/` di-gitignore, jangan commit credential ke repo
+- Database dibuat otomatis saat pertama kali dijalankan
