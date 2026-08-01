@@ -102,4 +102,36 @@ export function getUserById(id: string): User | null {
   return row ? toUser(row) : null;
 }
 
+/**
+ * Validasi session token (murni DB, tanpa next/headers).
+ * Dipakai juga di proxy.ts untuk proteksi route.
+ */
+export function getUserBySessionToken(token: string): User | null {
+  const row = db
+    .prepare(
+      `SELECT u.id, u.email, u.name, u.avatar_url, u.provider
+       FROM sessions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.token = ? AND s.expires_at > ?`,
+    )
+    .get(token, Math.floor(Date.now() / 1000)) as UserRow | undefined;
+  return row ? toUser(row) : null;
+}
+
+export function insertSession(token: string, userId: string, expiresAt: number): void {
+  db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(
+    token,
+    userId,
+    expiresAt,
+  );
+}
+
+export function deleteSessionToken(token: string): void {
+  db.prepare("DELETE FROM sessions WHERE token = ?").run(token);
+}
+
+export function deleteAllSessionsForUser(userId: string): void {
+  db.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+}
+
 export { db };

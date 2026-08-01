@@ -10,7 +10,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export function getGoogleAuthorizationUrl(state: string, redirectUri: string): string {
+export function getGoogleAuthorizationUrl(
+  state: string,
+  redirectUri: string,
+  codeChallenge?: string,
+): string {
   const params = new URLSearchParams({
     client_id: requireEnv("GOOGLE_CLIENT_ID"),
     redirect_uri: redirectUri,
@@ -19,20 +23,36 @@ export function getGoogleAuthorizationUrl(state: string, redirectUri: string): s
     state,
     prompt: "select_account",
   });
+
+  if (codeChallenge) {
+    params.set("code_challenge", codeChallenge);
+    params.set("code_challenge_method", "S256");
+  }
+
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
 }
 
-export async function getGoogleUser(code: string, redirectUri: string): Promise<ProviderUser> {
+export async function getGoogleUser(
+  code: string,
+  redirectUri: string,
+  codeVerifier?: string,
+): Promise<ProviderUser> {
+  const tokenBody = new URLSearchParams({
+    client_id: requireEnv("GOOGLE_CLIENT_ID"),
+    client_secret: requireEnv("GOOGLE_CLIENT_SECRET"),
+    code,
+    redirect_uri: redirectUri,
+    grant_type: "authorization_code",
+  });
+
+  if (codeVerifier) {
+    tokenBody.set("code_verifier", codeVerifier);
+  }
+
   const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: requireEnv("GOOGLE_CLIENT_ID"),
-      client_secret: requireEnv("GOOGLE_CLIENT_SECRET"),
-      code,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
+    body: tokenBody,
   });
 
   if (!tokenRes.ok) {

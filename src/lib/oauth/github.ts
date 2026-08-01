@@ -10,29 +10,49 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export function getGithubAuthorizationUrl(state: string, redirectUri: string): string {
+export function getGithubAuthorizationUrl(
+  state: string,
+  redirectUri: string,
+  codeChallenge?: string,
+): string {
   const params = new URLSearchParams({
     client_id: requireEnv("GITHUB_CLIENT_ID"),
     redirect_uri: redirectUri,
     scope: "read:user user:email",
     state,
   });
+
+  if (codeChallenge) {
+    params.set("code_challenge", codeChallenge);
+    params.set("code_challenge_method", "S256");
+  }
+
   return `${GITHUB_AUTH_URL}?${params.toString()}`;
 }
 
-export async function getGithubUser(code: string, redirectUri: string): Promise<ProviderUser> {
+export async function getGithubUser(
+  code: string,
+  redirectUri: string,
+  codeVerifier?: string,
+): Promise<ProviderUser> {
+  const tokenBody = new URLSearchParams({
+    client_id: requireEnv("GITHUB_CLIENT_ID"),
+    client_secret: requireEnv("GITHUB_CLIENT_SECRET"),
+    code,
+    redirect_uri: redirectUri,
+  });
+
+  if (codeVerifier) {
+    tokenBody.set("code_verifier", codeVerifier);
+  }
+
   const tokenRes = await fetch(GITHUB_TOKEN_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({
-      client_id: requireEnv("GITHUB_CLIENT_ID"),
-      client_secret: requireEnv("GITHUB_CLIENT_SECRET"),
-      code,
-      redirect_uri: redirectUri,
-    }),
+    body: tokenBody,
   });
 
   if (!tokenRes.ok) {
